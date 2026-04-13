@@ -23,12 +23,28 @@ model User {
 
   accessToken String?
 
-  sessions Session[]
-  accounts Account[]
+  // 🔥 ADD THESE
+  streak     Int       @default(0)
+  lastActive DateTime?
+  xp         Int       @default(0)
+  level      Int       @default(1)
 
-  plans FitnessPlan[]
+  sessions    Session[]
+  accounts    Account[]
+  plans       FitnessPlan[]
+  workoutLogs WorkoutLog[]
 
   @@map("user")
+}
+
+model WorkoutLog {
+  id     String   @id @default(cuid())
+  userId String
+  date   DateTime
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([userId, date])
 }
 
 model FitnessPlan {

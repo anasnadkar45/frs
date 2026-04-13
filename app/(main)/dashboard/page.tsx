@@ -5,17 +5,84 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Barbell, MapPin, Plus, Calendar, SignOut, BarbellIcon } from '@phosphor-icons/react';
 import Link from 'next/link';
+import { toast } from 'sonner';
 
 export default function DashboardPage() {
   const [mounted, setMounted] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [plans, setPlans] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState<any>(null);
+  const [logs, setLogs] = useState<any[]>([]);
+  const [loadingWorkout, setLoadingWorkout] = useState(false);
+
+  useEffect(() => {
+    fetchStats();
+  }, []);
+
+  const fetchStats = async () => {
+    const res = await fetch("/api/user-stats");
+    const data = await res.json();
+    setStats(data);
+  };
 
   useEffect(() => {
     setMounted(true);
     fetchData();
   }, []);
+
+  const fetchLogs = async () => {
+    const res = await fetch("/api/streak-data");
+    const data = await res.json();
+    setLogs(data);
+  };
+
+  useEffect(() => {
+    fetchLogs();
+  }, []);
+
+  const generateCalendar = () => {
+    const today = new Date();
+
+    // Start from 1st day of current month
+    const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+
+    // End of month
+    const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+
+    const days = [];
+
+    // Get first day index (0 = Sun)
+    const startDay = startOfMonth.getDay();
+
+    // Fill empty slots before month starts
+    for (let i = 0; i < startDay; i++) {
+      days.push(null);
+    }
+
+    // Fill actual days
+    for (let d = 1; d <= endOfMonth.getDate(); d++) {
+      const date = new Date(today.getFullYear(), today.getMonth(), d);
+
+      const completed = logs.some(
+        (log) => new Date(log.date).toDateString() === date.toDateString()
+      );
+
+      days.push({
+        date,
+        completed,
+      });
+    }
+
+    return days;
+  };
+
+  const calendarDays = generateCalendar();
+
+  const weeks = [];
+  for (let i = 0; i < calendarDays.length; i += 7) {
+    weeks.push(calendarDays.slice(i, i + 7));
+  }
 
   const fetchData = async () => {
     try {
@@ -35,6 +102,7 @@ export default function DashboardPage() {
   if (!mounted) {
     return null;
   }
+
 
   return (
     <div className="min-h-screen bg-background">
@@ -61,6 +129,8 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
 
+
+
           {/* AI Gym Finder */}
           <Card className="hover:shadow-md transition-shadow flex flex-col justify-between">
             <CardHeader className="pb-3">
@@ -73,11 +143,11 @@ export default function DashboardPage() {
               <p className="text-sm text-muted-foreground">
                 Find the best gyms near you.
               </p>
-                <Link href="/find-gym">
-                  <Button size="sm" variant="outline" className="w-full cursor-pointer">
-                    Find Gyms
-                  </Button>
-                </Link>
+              <Link href="/find-gym">
+                <Button size="sm" variant="outline" className="w-full cursor-pointer">
+                  Find Gyms
+                </Button>
+              </Link>
             </CardContent>
           </Card>
 
@@ -101,6 +171,125 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
         </div>
+
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle>🔥 Your Progress</CardTitle>
+          </CardHeader>
+
+          <CardContent className="space-y-4">
+            {stats ? (
+              <>
+                <div className="flex justify-between text-sm">
+                  <span>Streak</span>
+                  <span className="font-bold">{stats.streak} days</span>
+                </div>
+
+                <div className="flex justify-between text-sm">
+                  <span>XP</span>
+                  <span className="font-bold">{stats.xp}</span>
+                </div>
+
+                <div className="flex justify-between text-sm">
+                  <span>Level</span>
+                  <span className="font-bold">{stats.level}</span>
+                </div>
+
+                <Button
+                  className="w-full"
+                  disabled={loadingWorkout}
+                  onClick={async () => {
+                    setLoadingWorkout(true);
+
+                    try {
+                      const res = await fetch("/api/complete-workout", {
+                        method: "POST",
+                      });
+
+                      const data = await res.json();
+
+                      if (data.success) {
+                        fetchStats();
+                        fetchLogs();
+                      } else {
+                        toast.error(data.error);
+                      }
+                    } catch (err) {
+                      console.error(err);
+                    } finally {
+                      setLoadingWorkout(false);
+                    }
+                  }}
+                >
+                  {loadingWorkout ? "Saving..." : "Complete Workout"}
+                </Button>
+              </>
+            ) : (
+              <p>Loading...</p>
+            )}
+          </CardContent>
+        </Card>
+
+        <p className="text-sm font-medium mb-2">
+          {stats?.streak} day streak 🔥
+        </p>
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle>📅 Activity </CardTitle>
+            <h2 className="text-sm font-semibold mb-2">
+              {new Date().toLocaleString("default", { month: "long", year: "numeric" })}
+            </h2>
+          </CardHeader>
+
+          <CardContent>
+            {/* Days Header */}
+            <div className="grid grid-cols-7 gap-2 text-xs text-muted-foreground mb-2 text-center">
+              <span>Sun</span>
+              <span>Mon</span>
+              <span>Tue</span>
+              <span>Wed</span>
+              <span>Thu</span>
+              <span>Fri</span>
+              <span>Sat</span>
+            </div>
+
+            {/* Calendar */}
+            <div className="space-y-2">
+              {weeks.map((week, i) => (
+                <div key={i} className="grid grid-cols-7 gap-2">
+                  {week.map((day: any, j: number) => {
+                    if (!day) {
+                      return <div key={j} />;
+                    }
+
+                    const isToday =
+                      new Date().toDateString() === day.date.toDateString();
+
+                    return (
+                      <div
+                        key={j}
+                        title={day.date.toDateString()}
+                        className={`w-10 h-10 mx-auto rounded-md flex items-center justify-center text-sm transition-all
+                  ${day.completed
+                            ? "bg-green-200 "
+                            : "bg-muted border"
+                          }
+                  ${isToday ? "ring-2 ring-green-500" : ""}
+                `}
+                      >
+                        {day.date.getDate()}
+                      </div>
+                    );
+                  })}
+                </div>
+              ))}
+            </div>
+
+            <p className="text-xs text-muted-foreground mt-3">
+              Don’t break the chain 🔥
+            </p>
+          </CardContent>
+        </Card>
 
         {/* Recent Plans */}
         <div className="space-y-4">
