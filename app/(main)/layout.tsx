@@ -1,23 +1,36 @@
-import Navbar from '@/components/Navbar'
-import Sidebar from '@/components/Sidebar'
-import { ScrollArea } from '@/components/ui/scroll-area'
-import React from 'react'
+import Navbar from "@/components/Navbar";
+import Sidebar from "@/components/Sidebar";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { auth } from "@/lib/auth";
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
+import React from "react";
 
-const layout = ({ children }: {
-    children: React.ReactNode
+const Layout = async ({
+  children,
+}: {
+  children: React.ReactNode;
 }) => {
-    return (
-        <div className="flex h-screen gap-4 p-4">
-            <Sidebar />
+  // ✅ Get session on server
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
 
-            <ScrollArea className="border rounded-2xl flex-1 h-full w-full overflow-hidden">
-                <Navbar />
-                <div>
-                {children}
-                </div>
-            </ScrollArea>
-        </div>
-    )
-}
+  // ✅ Protect route
+  if (!session?.user) {
+    redirect("/login");
+  }
 
-export default layout
+  return (
+    <div className="flex h-screen gap-4 p-4">
+      <Sidebar />
+
+      <ScrollArea className="border rounded-2xl flex-1 h-full w-full overflow-hidden">
+        <Navbar />
+        <div className="p-4">{children}</div>
+      </ScrollArea>
+    </div>
+  );
+};
+
+export default Layout;

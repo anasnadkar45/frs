@@ -22,7 +22,7 @@ export default function LoginCard() {
     try {
       await authClient.signIn.social({
         provider: "google",
-        callbackURL: "/onboarding",
+        callbackURL: "/dashboard",
       })
       toast.success("Successfully signed in!")
       router.refresh()
@@ -45,10 +45,10 @@ export default function LoginCard() {
           <div className="p-8 squircle squircle-card squircle-4xl squircle-border squircle-border-border">
             <div className="mb-8 text-center">
               <h1 className={cn("mb-2 text-3xl font-bold")}>
-                Welcome to Stufff
+                Welcome to Fitness AI Recommendations 
               </h1>
               <p className="text-muted-foreground">
-                Create your space and share your links
+                Get personalized fitness recommendations powered by AI.
               </p>
             </div>
 
